@@ -1,11 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
+
 import { initializeApp } from "firebase/app";
+
 import {
-  getAuth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signOut,
 } from "firebase/auth";
+
+import {
+  auth,
+} from "./firebase.js";
 
 import {
   Alert,
@@ -88,32 +92,16 @@ export default function App() {
     setRoute('App');
   }
 
+  /*
+  // CONTROLLER PARA REGISTRO. //
+  */
+ 
   async function register(form) {
-    if (!form.nome || !form.email || !form.senha || !form.confirmar) {
-      Alert.alert('Atenção', 'Preencha todos os campos.');
-      return;
+    try {
+      createUserWithEmailAndPassword(auth, form.email, form.senha)
+    } catch(error) {
+      console.error(error)
     }
-    if (form.senha !== form.confirmar) {
-      Alert.alert('Atenção', 'As senhas não conferem.');
-      return;
-    }
-    if (!form.accepted) {
-      Alert.alert('Atenção', 'Aceite os Termos de Uso.');
-      return;
-    }
-    if (db.users.some((item) => item.email === form.email.trim())) {
-      Alert.alert('Atenção', 'Este e-mail já está cadastrado.');
-      return;
-    }
-    const newUser = {
-      id: Date.now(),
-      nome: form.nome.trim(),
-      email: form.email.trim(),
-      senha: form.senha,
-      dataCadastro: new Date().toISOString(),
-    };
-    await persist({ ...db, users: [...db.users, newUser] });
-    Alert.alert('Sucesso', 'Conta criada com sucesso.');
     setRoute('Login');
   }
 
