@@ -1,4 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { initializeApp } from "firebase/app";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
+
 import {
   Alert,
   FlatList,
