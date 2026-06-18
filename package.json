@@ -1,0 +1,26 @@
+{
+  "name": "memoriza-expo",
+  "version": "1.0.0",
+  "private": true,
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web --port 8083"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "~56.0.12",
+    "expo-notifications": "~56.0.18",
+    "expo-status-bar": "latest",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "latest",
+    "react-native-calendars": "latest",
+    "react-native-web": "latest"
+  },
+  "devDependencies": {
+    "@babel/core": "latest"
+  }
+}
