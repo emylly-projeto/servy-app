@@ -71,15 +71,37 @@ export default function App() {
   const todayTasks = tasks.filter((task) => task.data === formatDate(new Date()));
   const nextTask = pending[0];
 
-  function login(email, senha) {
-    const found = db.users.find((item) => item.email === email.trim() && item.senha === senha);
-    if (!found) {
-      Alert.alert('Atenção', 'Usuário ou senha inválidos.');
-      return;
+
+  /*
+  // CÓDIGO DO CONTROLLER PARA LOGIN. //
+  */
+ 
+  async function login(email, senha) {
+    console.log({ email, senha });
+
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        senha
+      );
+
+      console.log("Login realizado:", userCredential.user);
+
+      setRoute('App');
+    } catch (error) {
+      console.error("Erro ao logar:", error);
     }
-    setUser(found);
-    setRoute('App');
   }
+
+  /*
+  // FIM DO CÓDIGO DO CONTROLLER PARA LOGIN. //
+  */
+
+  
+  /*
+  // CÓDIGO DO CONTROLLER PARA LOGIN COM GOOGLE ( DEMO ). //
+  */
 
   function loginWithGoogle() {
     const demoUser = db.users[0];
@@ -93,7 +115,11 @@ export default function App() {
   }
 
   /*
-  // CONTROLLER PARA REGISTRO. //
+  // FIM DO CÓDIGO DO CONTROLLER PARA LOGIN COM GOOGLE ( DEMO ) //
+  */
+
+  /*
+  // CÓDIGO DO CONTROLLER PARA REGISTRO. //
   */
  
   async function register(form) {
@@ -104,6 +130,10 @@ export default function App() {
     }
     setRoute('Login');
   }
+
+  /*
+  // FIM DO CÓDIGO DO CONTROLLER PARA REGISTRO. //
+  */
 
   async function saveTask(form) {
     if (!form.titulo.trim()) {
