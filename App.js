@@ -1,4 +1,4 @@
-  /*
+/*
   // QUANDO ESSE CÓDIGO FOI CRIADO, APENAS EU E DEUS SABIA COMO FUNCIONAVA, AGORA SÓ ELE SABE. //
   */
  
@@ -520,7 +520,7 @@ function RegisterScreen({ onBack, onSubmit }) {
 
 function HomeScreen({ user, pending, completed, todayTasks, nextTask, onAdd, onDetail, onDone, onPreview }) {
   return (
-    <Screen>
+    <Screen fab={<Fab onPress={onAdd} />}>
       <View style={styles.topRow}>
         <View>
           <Text style={styles.h1}>Olá, {user?.displayName || user?.nome || user?.email?.split('@')[0] || 'Usuário'}! 👋</Text>
@@ -555,7 +555,6 @@ function HomeScreen({ user, pending, completed, todayTasks, nextTask, onAdd, onD
       <Card style={{ paddingVertical: 6 }}>
         {pending.slice(0, 4).map((task) => <TaskItem key={task.id} task={task} onPress={() => onDetail(task)} onDone={() => onDone(task)} />)}
       </Card>
-      <Fab onPress={onAdd} />
     </Screen>
   );
 }
@@ -564,7 +563,7 @@ function TasksScreen({ pending, completed, onAdd, onDetail, onDone, onEdit, onDe
   const [active, setActive] = useState('Pendentes');
   const items = active === 'Pendentes' ? pending : completed;
   return (
-    <Screen>
+    <Screen fab={<Fab onPress={onAdd} />}>
       <View style={styles.topRow}>
         <Text style={styles.h1}>Minhas tarefas</Text>
         <Text style={styles.navIcon}>⌕ ⋮</Text>
@@ -583,7 +582,6 @@ function TasksScreen({ pending, completed, onAdd, onDetail, onDone, onEdit, onDe
         ListEmptyComponent={<Text style={styles.empty}>Nenhuma tarefa encontrada.</Text>}
         contentContainerStyle={{ paddingBottom: 100 }}
       />
-      <Fab onPress={onAdd} />
     </Screen>
   );
 }
@@ -675,7 +673,7 @@ function CalendarScreen({ tasks, onDetail, onAdd }) {
   tasks.forEach((task) => { marked[brToIso(task.data)] = { marked: true, dotColor: '#FF3048' }; });
   marked[selected] = { ...(marked[selected] || {}), selected: true, selectedColor: purple };
   return (
-    <Screen>
+    <Screen fab={<Fab onPress={onAdd} />}>
       <Text style={styles.h1}>Calendário</Text>
       <Calendar
         current={selected}
@@ -687,7 +685,6 @@ function CalendarScreen({ tasks, onDetail, onAdd }) {
       <Text style={styles.sectionTitle}>{selectedBr}</Text>
       {dayTasks.map((task) => <TaskItem key={task.id} task={task} onPress={() => onDetail(task)} />)}
       {dayTasks.length === 0 && <Text style={styles.empty}>Nenhuma tarefa para esta data.</Text>}
-      <Fab onPress={onAdd} />
     </Screen>
   );
 }
@@ -775,8 +772,15 @@ function WidgetPreviewScreen({ onBack, nextTask, pending }) {
   );
 }
 
-function Screen({ children }) {
-  return <View style={styles.screen}><ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>{children}</ScrollView></View>;
+function Screen({ children, fab }) {
+  return (
+    <View style={styles.screen}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+        {children}
+      </ScrollView>
+      {fab}
+    </View>
+  );
 }
 
 function ScreenHeader({ title, onBack, children, action, onAction }) {
@@ -1004,7 +1008,7 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: 22,
-    bottom: 9,
+    bottom: 92,
     width: 58,
     height: 58,
     borderRadius: 29,
