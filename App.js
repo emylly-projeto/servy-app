@@ -47,6 +47,8 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
+  const [erro, setErro] = useState('');
+  
 
   useEffect(() => {
     async function start() {
@@ -59,6 +61,16 @@ export default function App() {
     }
     start();
   }, []);
+
+  async function handleLogin() {
+  setErro('');
+
+  const resultado = await onLogin(email, senha);
+
+  if (resultado?.error) {
+    setErro(resultado.error);
+  }
+}
 
   async function persist(nextDb) {
     setDb(nextDb);
@@ -77,8 +89,6 @@ export default function App() {
   */
  
   async function login(email, senha) {
-    console.log({ email, senha });
-
     try {
       const userCredential = await signInWithEmailAndPassword(
         auth,
@@ -88,9 +98,17 @@ export default function App() {
 
       console.log("Login realizado:", userCredential.user);
 
-      setRoute('App');
+      return {
+        success: true,
+        message: "Login realizado com sucesso!"
+      };
+
     } catch (error) {
-      console.error("Erro ao logar:", error);
+      if (error.code === "auth/invalid-credential") {
+        return { error: "E-mail ou senha incorretos." };
+      }
+
+      return { error: "Erro ao realizar login." };
     }
   }
 
@@ -123,13 +141,38 @@ export default function App() {
   */
  
   async function register(form) {
-    try {
-      createUserWithEmailAndPassword(auth, form.email, form.senha)
-    } catch(error) {
-      console.error(error)
+  try {
+    await createUserWithEmailAndPassword(
+      auth,
+      form.email,
+      form.senha
+    );
+
+    return {
+      success: true,
+      message: "Conta criada com sucesso!"
+    };
+
+  } catch (error) {
+    console.error(error);
+
+    if (error.code === "auth/email-already-in-use") {
+      return {
+        error: "Este e-mail já está cadastrado."
+      };
     }
-    setRoute('Login');
+
+    if (error.code === "auth/weak-password") {
+      return {
+        error: "A senha deve ter pelo menos 6 caracteres."
+      };
+    }
+
+    return {
+      error: "Erro ao criar conta."
+    };
   }
+}
 
   /*
   // FIM DO CÓDIGO DO CONTROLLER PARA REGISTRO. //
@@ -186,7 +229,15 @@ export default function App() {
   }
 
   if (!ready || route === 'Splash') return <SplashScreen />;
-  if (route === 'Login') return <LoginScreen onLogin={login} onGoogle={loginWithGoogle} onRegister={() => setRoute('Register')} />;
+  if (route === 'Login')
+    return (
+      <LoginScreen
+        onLogin={login}
+        onGoogle={loginWithGoogle}
+        onRegister={() => setRoute('Register')}
+        setRoute={setRoute}
+      />
+    );
   if (route === 'Register') return <RegisterScreen onBack={() => setRoute('Login')} onSubmit={register} />;
   if (route === 'AddTask') return <TaskFormScreen task={editingTask} onBack={() => setRoute('App')} onSubmit={saveTask} />;
   if (route === 'Detail') return <TaskDetailScreen task={selectedTask} onBack={() => setRoute('App')} onEdit={(task) => { setEditingTask(task); setRoute('AddTask'); }} onDone={(task) => confirmComplete(task, true)} onDelete={deleteTask} />;
@@ -246,9 +297,11 @@ function SplashScreen() {
   );
 }
 
-function LoginScreen({ onLogin, onGoogle, onRegister }) {
-  const [email, setEmail] = useState('seuemail@gmail.com');
-  const [senha, setSenha] = useState('123456');
+function LoginScreen({ onLogin, onGoogle, onRegister, setRoute }) {
+const [email, setEmail] = useState('');
+const [senha, setSenha] = useState('');
+const [erro, setErro] = useState('');
+const [sucesso, setSucesso] = useState('');
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.authContent}>
@@ -257,8 +310,38 @@ function LoginScreen({ onLogin, onGoogle, onRegister }) {
         <Text style={styles.authSubtitle}>Faça login para continuar</Text>
         <Input label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" />
         <Input label="Senha" value={senha} onChangeText={setSenha} secureTextEntry />
+        {erro ? (
+          <Text style={{ color: 'red', marginBottom: 10 }}>
+            {erro}
+          </Text>
+        ) : null}
+
+        {sucesso ? (
+          <Text style={{ color: 'green', marginBottom: 10 }}>
+            {sucesso}
+          </Text>
+        ) : null}
         <Text style={styles.forgot}>Esqueceu sua senha?</Text>
-        <Button title="Entrar" onPress={() => onLogin(email, senha)} />
+        <Button
+          title="Entrar"
+          onPress={async () => {
+            setErro('');
+            setSucesso('');
+
+            const resultado = await onLogin(email, senha);
+
+            if (resultado?.error) {
+              setErro(resultado.error);
+            }
+            if (resultado?.success) {
+              setSucesso(resultado.message);
+
+              setTimeout(() => {
+                setRoute('App');
+              }, 1500);
+            }
+          }}
+        />
         <View style={styles.orRow}><View style={styles.line} /><Text style={styles.or}>ou</Text><View style={styles.line} /></View>
         <Pressable style={styles.googleButton} onPress={onGoogle}><Text style={styles.googleText}>G  Entrar com Google</Text></Pressable>
         <Text style={styles.bottomLink}>Não tem uma conta? <Text style={styles.link} onPress={onRegister}>Cadastre-se</Text></Text>
@@ -269,6 +352,8 @@ function LoginScreen({ onLogin, onGoogle, onRegister }) {
 
 function RegisterScreen({ onBack, onSubmit }) {
   const [form, setForm] = useState({ nome: '', email: '', senha: '', confirmar: '', accepted: false });
+  const [erro, setErro] = useState('');
+  const [sucesso, setSucesso] = useState('');
   return (
     <ScreenHeader title="Criar conta" onBack={onBack}>
       <Text style={styles.authSubtitle}>Vamos começar!</Text>
@@ -280,7 +365,38 @@ function RegisterScreen({ onBack, onSubmit }) {
         <View style={[styles.checkbox, form.accepted && styles.checkboxOn]}><Text style={styles.checkText}>{form.accepted ? '✓' : ''}</Text></View>
         <Text>Eu concordo com os <Text style={styles.link}>Termos de Uso</Text></Text>
       </Pressable>
-      <Button title="Cadastrar" onPress={() => onSubmit(form)} />
+      {erro ? (
+      <Text style={{ color: 'red', marginBottom: 10 }}>
+        {erro}
+      </Text>
+    ) : null}
+
+    {sucesso ? (
+      <Text style={{ color: 'green', marginBottom: 10 }}>
+        {sucesso}
+      </Text>
+    ) : null}
+      <Button
+        title="Cadastrar"
+        onPress={async () => {
+          setErro('');
+          setSucesso('');
+
+          const resultado = await onSubmit(form);
+
+          if (resultado?.error) {
+            setErro(resultado.error);
+          }
+
+          if (resultado?.success) {
+            setSucesso(resultado.message);
+
+            setTimeout(() => {
+              onBack(); // volta para Login
+            }, 1500);
+          }
+        }}
+      />
       <Pressable onPress={onBack}><Text style={styles.bottomLink}>Já tem uma conta? <Text style={styles.link}>Entrar</Text></Text></Pressable>
     </ScreenHeader>
   );
