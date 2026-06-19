@@ -5,11 +5,10 @@ import { initializeApp } from "firebase/app";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 
-import {
-  auth,
-} from "./firebase.js";
+import { auth } from "./firebase.js";
 
 import {
   Alert,
@@ -240,6 +239,7 @@ export default function App() {
     );
   if (route === 'Register') return <RegisterScreen onBack={() => setRoute('Login')} onSubmit={register} />;
   if (route === 'AddTask') return <TaskFormScreen task={editingTask} onBack={() => setRoute('App')} onSubmit={saveTask} />;
+  if (route === 'ForgotPassword') return <ForgotPasswordScreen onBack={() => setRoute('Login')} />;
   if (route === 'Detail') return <TaskDetailScreen task={selectedTask} onBack={() => setRoute('App')} onEdit={(task) => { setEditingTask(task); setRoute('AddTask'); }} onDone={(task) => confirmComplete(task, true)} onDelete={deleteTask} />;
   if (route === 'Notification') return <NotificationScreen onBack={() => setRoute('App')} />;
   if (route === 'Reinforcement') return <ReinforcementScreen onBack={() => setRoute('App')} />;
@@ -308,8 +308,21 @@ const [sucesso, setSucesso] = useState('');
         <Text style={styles.authLogo}>Memoriza</Text>
         <Text style={styles.authTitle}>Bem-vindo de volta!</Text>
         <Text style={styles.authSubtitle}>Faça login para continuar</Text>
-        <Input label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" />
-        <Input label="Senha" value={senha} onChangeText={setSenha} secureTextEntry />
+        <Input
+          label="E-mail"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          placeholder="seuemail@gmail.com"
+        />
+
+        <Input
+          label="Senha"
+          value={senha}
+          onChangeText={setSenha}
+          secureTextEntry
+          placeholder="Digite sua senha"
+        />
         {erro ? (
           <Text style={{ color: 'red', marginBottom: 10 }}>
             {erro}
@@ -321,7 +334,7 @@ const [sucesso, setSucesso] = useState('');
             {sucesso}
           </Text>
         ) : null}
-        <Text style={styles.forgot}>Esqueceu sua senha?</Text>
+        <Text style={styles.forgot} onPress={() => setRoute('ForgotPassword')}>Esqueceu sua senha?</Text>
         <Button
           title="Entrar"
           onPress={async () => {
@@ -349,6 +362,67 @@ const [sucesso, setSucesso] = useState('');
     </KeyboardAvoidingView>
   );
 }
+function ForgotPasswordScreen({ onBack }) {
+  const [email, setEmail] = useState('');
+  const [enviado, setEnviado] = useState(false);
+  const [erro, setErro] = useState('');
+  const [carregando, setCarregando] = useState(false);
+
+  return (
+    <ScreenHeader title="Esqueci minha senha" onBack={onBack}>
+      <View style={{ marginTop: 16 }}>
+        <Text style={styles.authSubtitle}>
+          Digite seu e-mail e enviaremos as instruções para redefinir sua senha.
+        </Text>
+        <Input
+          label="E-mail"
+          value={email}
+          onChangeText={(v) => { setEmail(v); setErro(''); setEnviado(false); }}
+          keyboardType="email-address"
+          placeholder="seuemail@gmail.com"
+        />
+        {erro ? (
+          <Text style={{ color: 'red', fontWeight: '700', marginBottom: 12, textAlign: 'center' }}>
+            {erro}
+          </Text>
+        ) : null}
+        {enviado ? (
+          <Text style={{ color: '#238C44', fontWeight: '700', marginBottom: 12, textAlign: 'center' }}>
+             E-mail enviado! Verifique sua caixa de entrada.
+          </Text>
+        ) : null}
+        <Button
+          title={carregando ? 'Enviando...' : 'Enviar Senha'}
+          onPress={async () => {
+            setErro('');
+            setEnviado(false);
+
+            if (!email.trim()) {
+              setErro('Informe seu e-mail.');
+              return;
+            }
+
+            setCarregando(true);
+            try {
+              await sendPasswordResetEmail(auth, email.trim());
+              setEnviado(true);
+            } catch (error) {
+              if (error.code === 'auth/user-not-found') {
+                setErro('Nenhuma conta encontrada com este e-mail.');
+              } else if (error.code === 'auth/invalid-email') {
+                setErro('E-mail inválido.');
+              } else {
+                setErro('Não foi possível enviar o e-mail. Tente novamente.');
+              }
+            } finally {
+              setCarregando(false);
+            }
+          }}
+        />
+      </View>
+    </ScreenHeader>
+  );
+}
 
 function RegisterScreen({ onBack, onSubmit }) {
   const [form, setForm] = useState({ nome: '', email: '', senha: '', confirmar: '', accepted: false });
@@ -357,10 +431,35 @@ function RegisterScreen({ onBack, onSubmit }) {
   return (
     <ScreenHeader title="Criar conta" onBack={onBack}>
       <Text style={styles.authSubtitle}>Vamos começar!</Text>
-      <Input label="Nome completo" value={form.nome} onChangeText={(v) => setForm({ ...form, nome: v })} placeholder="Seu nome" />
-      <Input label="E-mail" value={form.email} onChangeText={(v) => setForm({ ...form, email: v })} placeholder="seuemail@gmail.com" />
-      <Input label="Senha" value={form.senha} onChangeText={(v) => setForm({ ...form, senha: v })} secureTextEntry />
-      <Input label="Confirmar senha" value={form.confirmar} onChangeText={(v) => setForm({ ...form, confirmar: v })} secureTextEntry />
+    <Input
+      label="Nome completo"
+      value={form.nome}
+      onChangeText={(v) => setForm({ ...form, nome: v })}
+      placeholder="Seu nome"
+    />
+
+    <Input
+      label="E-mail"
+      value={form.email}
+      onChangeText={(v) => setForm({ ...form, email: v })}
+      placeholder="seuemail@gmail.com"
+    />
+
+    <Input
+      label="Senha"
+      value={form.senha}
+      onChangeText={(v) => setForm({ ...form, senha: v })}
+      placeholder="Digite sua senha"
+      secureTextEntry
+    />
+
+    <Input
+      label="Confirmar senha"
+      value={form.confirmar}
+      onChangeText={(v) => setForm({ ...form, confirmar: v })}
+      placeholder="Repita sua senha"
+      secureTextEntry
+    />
       <Pressable style={styles.checkRow} onPress={() => setForm({ ...form, accepted: !form.accepted })}>
         <View style={[styles.checkbox, form.accepted && styles.checkboxOn]}><Text style={styles.checkText}>{form.accepted ? '✓' : ''}</Text></View>
         <Text>Eu concordo com os <Text style={styles.link}>Termos de Uso</Text></Text>
@@ -392,7 +491,7 @@ function RegisterScreen({ onBack, onSubmit }) {
             setSucesso(resultado.message);
 
             setTimeout(() => {
-              onBack(); // volta para Login
+              onBack();
             }, 1500);
           }
         }}
@@ -798,7 +897,18 @@ const styles = StyleSheet.create({
   miniButton: { flex: 1, backgroundColor: '#F0EAFE', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
   miniButtonText: { color: purple, fontWeight: '800', fontSize: 12 },
   sectionTitle: { fontSize: 16, color: text, fontWeight: '900', marginBottom: 10, marginTop: 6 },
-  fab: { position: 'absolute', right: 22, bottom: 92, width: 58, height: 58, borderRadius: 29, backgroundColor: purple, alignItems: 'center', justifyContent: 'center', elevation: 5 },
+  fab: {
+    position: "absolute",
+    right: 22,
+    bottom: 9,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: purple,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 5,
+  },
   fabText: { color: 'white', fontSize: 32, marginTop: -2 },
   tabs: { flexDirection: 'row', gap: 10, marginBottom: 14 },
   tabPill: { flex: 1, height: 42, borderRadius: 12, backgroundColor: '#F1EFF9', alignItems: 'center', justifyContent: 'center' },
