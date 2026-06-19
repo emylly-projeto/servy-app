@@ -89,17 +89,18 @@ export default function App() {
  
   async function login(email, senha) {
     try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        senha
-      );
+      const userCredential = await signInWithEmailAndPassword(auth, email, senha);
 
-      console.log("Login realizado:", userCredential.user);
+      const firebaseUser = userCredential.user;
+
+      console.log("Login realizado:", firebaseUser);
+
+      setUser(firebaseUser);
 
       return {
         success: true,
-        message: "Login realizado com sucesso!"
+        message: "Login realizado com sucesso!",
+        user: firebaseUser,
       };
 
     } catch (error) {
@@ -506,7 +507,7 @@ function HomeScreen({ user, pending, completed, todayTasks, nextTask, onAdd, onD
     <Screen>
       <View style={styles.topRow}>
         <View>
-          <Text style={styles.h1}>Olá, {user?.nome?.split(' ')[0] || 'Ana'}! 👋</Text>
+          <Text style={styles.h1}>Olá, {user?.displayName || user?.nome || user?.email?.split('@')[0] || 'Usuário'}! 👋</Text>
           <Text style={styles.sub}>Vamos ter um dia incrível!</Text>
         </View>
         <Pressable onPress={() => onPreview('Notification')}><Text style={styles.navIcon}>🔔</Text></Pressable>
