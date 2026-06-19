@@ -1,3 +1,8 @@
+  /*
+  // QUANDO ESSE CÓDIGO FOI CRIADO, APENAS EU E DEUS SABIA COMO FUNCIONAVA, AGORA SÓ ELE SABE. //
+  */
+ 
+
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { initializeApp } from "firebase/app";
@@ -46,8 +51,6 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
-  const [erro, setErro] = useState('');
-  
 
   useEffect(() => {
     async function start() {
@@ -61,22 +64,14 @@ export default function App() {
     start();
   }, []);
 
-  async function handleLogin() {
-  setErro('');
-
-  const resultado = await onLogin(email, senha);
-
-  if (resultado?.error) {
-    setErro(resultado.error);
-  }
-}
-
   async function persist(nextDb) {
     setDb(nextDb);
     await saveDb(nextDb);
   }
 
-  const tasks = useMemo(() => db.tasks.filter((task) => task.usuarioId === user?.id), [db.tasks, user]);
+  const userId = user?.uid || user?.id;
+
+  const tasks = useMemo(() => db.tasks.filter((task) => task.usuarioId === userId), [db.tasks, userId]);
   const pending = tasks.filter((task) => !task.concluida);
   const completed = tasks.filter((task) => task.concluida);
   const todayTasks = tasks.filter((task) => task.data === formatDate(new Date()));
@@ -185,7 +180,7 @@ export default function App() {
     }
     const task = {
       id: form.id || Date.now(),
-      usuarioId: user.id,
+      usuarioId: userId,
       titulo: form.titulo.trim(),
       descricao: form.descricao.trim(),
       data: form.data,
@@ -203,14 +198,35 @@ export default function App() {
     setRoute('App');
   }
 
-  async function updateTask(task) {
-    const nextTasks = db.tasks.map((item) => (item.id === task.id ? task : item));
-    await persist({ ...db, tasks: nextTasks });
-    setSelectedTask(task);
+  async function updateTask(updatedTask) {
+    const nextTasks = db.tasks.map((item) =>
+      item.id === updatedTask.id ? updatedTask : item
+    );
+
+    const newDb = {
+      ...db,
+      tasks: nextTasks,
+    };
+
+    await persist(newDb);
+
+    if (selectedTask?.id === updatedTask.id) {
+      setSelectedTask(updatedTask);
+    }
   }
 
   function confirmComplete(task, nextValue = true) {
-    const message = nextValue ? 'Deseja marcar esta tarefa como concluida?' : 'Deseja voltar esta tarefa para pendente?';
+    const message = nextValue
+      ? 'Deseja marcar esta tarefa como concluida?'
+      : 'Deseja voltar esta tarefa para pendente?';
+
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(message)) {
+        updateTask({ ...task, concluida: nextValue });
+      }
+      return;
+    }
+
     Alert.alert('Confirmar acao', message, [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Confirmar', onPress: () => updateTask({ ...task, concluida: nextValue }) },
@@ -241,7 +257,7 @@ export default function App() {
   if (route === 'Register') return <RegisterScreen onBack={() => setRoute('Login')} onSubmit={register} />;
   if (route === 'AddTask') return <TaskFormScreen task={editingTask} onBack={() => setRoute('App')} onSubmit={saveTask} />;
   if (route === 'ForgotPassword') return <ForgotPasswordScreen onBack={() => setRoute('Login')} />;
-  if (route === 'Detail') return <TaskDetailScreen task={selectedTask} onBack={() => setRoute('App')} onEdit={(task) => { setEditingTask(task); setRoute('AddTask'); }} onDone={(task) => confirmComplete(task, true)} onDelete={deleteTask} />;
+  if (route === 'Detail') return <TaskDetailScreen task={selectedTask} onBack={() => setRoute('App')} onEdit={(task) => { setEditingTask(task); setRoute('AddTask'); }} onDone={(task) => confirmComplete(task, !task.concluida)} onDelete={deleteTask} />;
   if (route === 'Notification') return <NotificationScreen onBack={() => setRoute('App')} />;
   if (route === 'Reinforcement') return <ReinforcementScreen onBack={() => setRoute('App')} />;
   if (route === 'Widget') return <WidgetPreviewScreen onBack={() => setRoute('App')} nextTask={nextTask} pending={pending.length} />;
@@ -258,7 +274,7 @@ export default function App() {
           nextTask={nextTask}
           onAdd={() => { setEditingTask(null); setRoute('AddTask'); }}
           onDetail={(task) => { setSelectedTask(task); setRoute('Detail'); }}
-          onDone={(task) => confirmComplete(task, true)}
+          onDone={(task) => confirmComplete(task, !task.concluida)}
           onPreview={(nextRoute) => setRoute(nextRoute)}
         />
       )}
@@ -600,21 +616,53 @@ function TaskFormScreen({ task, onBack, onSubmit }) {
 
 function TaskDetailScreen({ task, onBack, onEdit, onDone, onDelete }) {
   if (!task) return null;
+
+  const isDone = task.concluida === true;
+
   return (
-    <ScreenHeader title="Detalhes da tarefa" onBack={onBack} action="✎" onAction={() => onEdit(task)}>
+    <ScreenHeader
+      title="Detalhes da tarefa"
+      onBack={onBack}
+      action="✎"
+      onAction={() => onEdit(task)}
+    >
       <View style={styles.detailCenter}>
-        <View style={styles.detailIcon}><Text style={{ fontSize: 48 }}>💊</Text></View>
+        <View style={styles.detailIcon}>
+          <Text style={{ fontSize: 48 }}>💊</Text>
+        </View>
+
         <Text style={styles.detailTitle}>{task.titulo}</Text>
-        <Text style={[styles.priorityBadge, { color: priorityColor(task.prioridade), backgroundColor: `${priorityColor(task.prioridade)}20` }]}>{task.prioridade} prioridade</Text>
+
+        <Text
+          style={[
+            styles.priorityBadge,
+            {
+              color: priorityColor(task.prioridade),
+              backgroundColor: `${priorityColor(task.prioridade)}20`,
+            },
+          ]}
+        >
+          {task.prioridade} prioridade
+        </Text>
       </View>
+
       <View style={styles.divider} />
+
       <DetailRow icon="📅" text={task.data} />
       <DetailRow icon="🕘" text={task.hora} />
       <DetailRow icon="🔁" text={`Repetir: ${task.repetir}`} />
       <DetailRow icon="📝" text={task.descricao} />
+
       <View style={{ height: 40 }} />
-      <Button title={task.concluida ? 'Tarefa concluída' : 'Marcar como concluída'} onPress={() => onDone(task)} />
-      <Pressable onPress={() => onDelete(task)}><Text style={styles.deleteText}>Excluir tarefa</Text></Pressable>
+
+      <Button
+        title={isDone ? 'Tarefa concluída ✓' : 'Marcar como concluída'}
+        onPress={() => onDone(task)}
+      />
+
+      <Pressable onPress={() => onDelete(task)}>
+        <Text style={styles.deleteText}>Excluir tarefa</Text>
+      </Pressable>
     </ScreenHeader>
   );
 }
@@ -768,14 +816,69 @@ function Stat({ label, value, bg: backgroundColor, color }) {
 function TaskItem({ task, onPress, onDone, onEdit, onDelete, menu }) {
   return (
     <Pressable style={styles.taskItem} onPress={onPress}>
-      <View style={[styles.iconBubble, { backgroundColor: `${priorityColor(task.prioridade)}18` }]}><Text>{taskIcon(task.titulo)}</Text></View>
+      
+      <View
+        style={[
+          styles.iconBubble,
+          { backgroundColor: `${priorityColor(task.prioridade)}18` },
+        ]}
+      >
+        <Text>{taskIcon(task.titulo)}</Text>
+      </View>
+
       <View style={{ flex: 1 }}>
         <Text style={styles.taskTitle}>{task.titulo}</Text>
-        <Text style={styles.taskMeta}>{task.data === formatDate(new Date()) ? 'Hoje' : task.data}, {task.hora}</Text>
+        <Text style={styles.taskMeta}>
+          {task.data === formatDate(new Date()) ? 'Hoje' : task.data}, {task.hora}
+        </Text>
       </View>
-      <Text style={[styles.prioritySmall, { color: priorityColor(task.prioridade), backgroundColor: `${priorityColor(task.prioridade)}18` }]}>{task.prioridade}</Text>
-      {onDone && <Pressable onPress={onDone}><Text style={styles.circle}>{task.concluida ? '✓' : '○'}</Text></Pressable>}
-      {menu && <Pressable onPress={() => Alert.alert('Tarefa', 'Escolha uma ação', [{ text: 'Editar', onPress: onEdit }, { text: 'Excluir', onPress: onDelete, style: 'destructive' }, { text: 'Cancelar', style: 'cancel' }])}><Text style={styles.menu}>⋮</Text></Pressable>}
+
+      <Text
+        style={[
+          styles.prioritySmall,
+          {
+            color: priorityColor(task.prioridade),
+            backgroundColor: `${priorityColor(task.prioridade)}18`,
+          },
+        ]}
+      >
+        {task.prioridade}
+      </Text>
+
+      {/* BOTÃO CONCLUIR */}
+      {onDone && (
+        <Pressable
+          onPress={(e) => {
+            e?.stopPropagation?.(); // evita abrir detalhes junto
+            onDone(task);
+          }}
+          hitSlop={10}
+        >
+          <Text style={styles.circle}>
+            {task.concluida ? '✓' : '○'}
+          </Text>
+        </Pressable>
+      )}
+
+      {/* MENU */}
+      {menu && (
+        <Pressable
+          onPress={(e) => {
+            e?.stopPropagation?.();
+            Alert.alert('Tarefa', 'Escolha uma ação', [
+              { text: 'Editar', onPress: () => onEdit(task) },
+              {
+                text: 'Excluir',
+                onPress: () => onDelete(task),
+                style: 'destructive',
+              },
+              { text: 'Cancelar', style: 'cancel' },
+            ]);
+          }}
+        >
+          <Text style={styles.menu}>⋮</Text>
+        </Pressable>
+      )}
     </Pressable>
   );
 }
